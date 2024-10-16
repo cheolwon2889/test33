@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itwillbs.mapper.ProdMapper">
+<!-- mapper 파일 찾아오는 주소 설정 -->
+
+
+<!-- 제품등록 -->
+<insert id="insertProd">
+	insert into prod (prod_id, prod_name, prod_reguser, prod_upduser, prod_category, 
+	 prod_brand, prod_image, company_code, prod_remarks) 
+	  values (#{prod_id}, #{prod_name}, #{prod_reguser}, #{prod_upduser}, #{prod_category}, 
+	    #{prod_brand}, #{prod_image}, #{company_code}, #{prod_remarks})
+</insert>
+
+<insert id="insertProdPWQ">
+	insert into stock (prod_id, wh_number, prod_qty) 
+	 values (#{prod_id},#{wh_number},#{prod_qty})
+	  on duplicate key update prod_qty = prod_qty + #{prod_qty}
+</insert>
+
+
+<!-- 제품 목록(List) -->
+<select id="listProd" resultType="ProdVO">
+	select prod.prod_id, coalesce(sum(stock.prod_qty), 0) as prod_qty, prod_name, prod_category, 
+	 date_format(prod_regdate, '%Y-%m-%d (%a) %H:%i') as formatted_regdate, prod_brand, prod_image, company_code 
+	  from prod 
+	   left join stock on prod.prod_id = stock.prod_id 
+	    where prod.prod_status != '02' 
+	     group by prod.prod_id;
+</select>
+
+
+<!-- 제품 조회 -->
+<select id="findProd" resultType="ProdVO">
+	select *, date_format(prod_regdate, '%Y-%m-%d (%a) %H:%i') as formatted_regdate, 
+	 date_format(prod_upddate, '%Y-%m-%d (%a) %H:%i') as formatted_upddate
+	   from prod  
+	    where prod_id = #{prod_id} and prod_status != '02';
+</select>
+
+<select id="findProdList" resultType="ProdVO">
+	select p.prod_id, s.wh_number, s.prod_qty 
+	 from prod p left join stock s on p.prod_id = s.prod_id where p.prod_id = #{prod_id};
+</select>
+
+
+<!-- 제품 수정 -->
+<update id="updateProd">
+	update prod  
+	 set prod_name = #{prod_name}, prod_category = #{prod_category}, prod_brand = #{prod_brand}, 
+	  prod_remarks = #{prod_remarks}, prod_image = #{prod_image}, prod_upduser = #{prod_upduser} 
+	  	where prod_id = #{prod_id}
+</update>
+
+
+<!-- 제품 삭제 -->
+<update id="deleteProd">
+	update prod 
+	 set prod_status = '02' 
+	  where prod_id = #{prod_id}
+</update>
+
+
+<!-- 재고 이동 -->
+<select id="transferSelect" resultType="ProdVO">
+	select distinct p.prod_id, p.prod_name, p.prod_image
+	 from prod p
+	  join stock s on p.prod_id = s.prod_id 
+	   where p.prod_status != '02'
+</select>
+<select id="transferSelect2" resultType="ProdVO">
+	select s.wh_number, w.wh_code, w.wh_name, w.wh_location, s.prod_qty 
+	 from stock s 
+	  left join warehouse w on s.wh_number = w.wh_number 
+	   where s.prod_id = #{prod_id}
+</select>
+
+
+
+
+
+
+</mapper>
